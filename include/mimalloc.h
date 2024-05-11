@@ -285,7 +285,6 @@ mi_decl_export bool mi_manage_os_memory(void* start, size_t size, bool is_commit
 
 mi_decl_export void mi_debug_show_arenas(void) mi_attr_noexcept;
 
-mi_decl_export bool mi_heap_page_is_underutilized(mi_heap_t* heap, void* p, float ratio) mi_attr_noexcept;
 mi_decl_export float mi_heap_page_utilization(mi_heap_t* heap, void* p) mi_attr_noexcept;
 
 // Experimental: heaps associated with specific memory arena's
