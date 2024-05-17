@@ -415,8 +415,12 @@ void mi_thread_stats_print_out(mi_output_fun* out, void* arg) mi_attr_noexcept {
 
 void mi_thread_stats(int64_t *allocated, int64_t *committed) mi_attr_noexcept {
   mi_heap_t *heap = mi_heap_get_default();
-  *committed = heap->committed;
-  *allocated = heap->allocated;
+  if (mi_likely(committed)) {
+    *committed = heap->committed;
+  }
+  if (mi_likely(allocated)) {
+    *allocated = heap->allocated;
+  }
 }
 
 // ----------------------------------------------------------------

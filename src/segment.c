@@ -895,8 +895,8 @@ static mi_segment_t* mi_segment_alloc(size_t required, size_t page_alignment, mi
   segment->kind = (required == 0 ? MI_SEGMENT_NORMAL : MI_SEGMENT_HUGE);
 
   // _mi_memzero(segment->slices, sizeof(mi_slice_t)*(info_slices+1));
-  mi_heap_t *heap = mi_heap_get_default();
-  heap->committed += mi_segment_info_size(segment);
+  // A segment belongs to a thread, not any specific heap. Do not update heap
+  // stats.
   _mi_stat_increase(&tld->stats->page_committed, mi_segment_info_size(segment));
 
   // set up guard pages
@@ -964,11 +964,8 @@ static void mi_segment_free(mi_segment_t* segment, bool force, mi_segments_tld_t
   }
   mi_assert_internal(page_count == 2); // first page is allocated by the segment itself
 
-  // stats
-  if (segment->thread_id != 0) {
-    mi_heap_t *heap = mi_heap_get_default();
-    heap->committed -= mi_segment_info_size(segment);
-  }
+  // A segment belongs to a thread, not any specific heap. Do not update heap
+  // stats.
   _mi_stat_decrease(&tld->stats->page_committed, mi_segment_info_size(segment));
 
   // return it to the OS
@@ -990,8 +987,8 @@ static mi_slice_t* mi_segment_page_clear(mi_page_t* page, mi_segments_tld_t* tld
   mi_assert_internal(segment->used > 0);
   
   size_t inuse = page->capacity * mi_page_block_size(page);
-  if (segment->thread_id != 0) {
-    mi_heap_t *heap = mi_heap_get_default();
+  mi_heap_t *heap = mi_page_heap(page);
+  if (heap) {
     heap->committed -= inuse;
   }
   _mi_stat_decrease(&tld->stats->page_committed, inuse);
@@ -1355,6 +1352,10 @@ static mi_segment_t* mi_segment_reclaim(mi_segment_t* segment, mi_heap_t* heap, 
       segment->abandoned--;
       // set the heap again and allow delayed free again
       mi_page_set_heap(page, heap);
+      // update the heap stats first since it is going to be decreased in page
+      // free collect.
+      heap->allocated += (page->used * mi_page_usable_block_size(page));
+      heap->committed += (page->capacity * mi_page_block_size(page));
       _mi_page_use_delayed_free(page, MI_USE_DELAYED_FREE, true); // override never (after heap is set)
       _mi_page_free_collect(page, false); // ensure used count is up to date
       if (mi_page_all_free(page)) {
