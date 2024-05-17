@@ -391,6 +391,10 @@ void _mi_page_abandon(mi_page_t* page, mi_page_queue_t* pq) {
   mi_segments_tld_t* segments_tld = &pheap->tld->segments;
   mi_page_queue_remove(pq, page);
 
+  // Update heap stats
+  pheap->allocated -= (page->used * mi_page_usable_block_size(page));
+  pheap->committed -= (page->capacity * mi_page_block_size(page));
+
   // page is no longer associated with our heap
   mi_assert_internal(mi_page_thread_free_flag(page)==MI_NEVER_DELAYED_FREE);
   mi_page_set_heap(page, NULL);
@@ -407,8 +411,7 @@ void _mi_page_abandon(mi_page_t* page, mi_page_queue_t* pq) {
   _mi_segment_page_abandon(page,segments_tld);
 }
 
-
-// Free a page with no more free blocks
+// Free a page with no more used blocks
 void _mi_page_free(mi_page_t* page, mi_page_queue_t* pq, bool force) {
   mi_assert_internal(page != NULL);
   mi_assert_expensive(_mi_page_is_valid(page));
@@ -425,6 +428,8 @@ void _mi_page_free(mi_page_t* page, mi_page_queue_t* pq, bool force) {
   // (no need to do _mi_heap_delayed_free first as all blocks are already free)
   mi_segments_tld_t* segments_tld = &heap->tld->segments;
   mi_page_queue_remove(pq, page);
+  // Update heap stats
+  heap->committed -= (page->capacity * mi_page_block_size(page));
 
   // and free it
   mi_page_set_heap(page,NULL);
@@ -855,7 +860,7 @@ static mi_page_t* mi_large_huge_page_alloc(mi_heap_t* heap, size_t size, size_t 
     else {
       mi_assert_internal(_mi_page_segment(page)->kind != MI_SEGMENT_HUGE);
     }
-    
+
     const size_t bsize = mi_page_usable_block_size(page);  // note: not `mi_page_block_size` to account for padding
     if (bsize <= MI_LARGE_OBJ_SIZE_MAX) {
       mi_heap_stat_increase(heap, large, bsize);
