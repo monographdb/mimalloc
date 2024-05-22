@@ -1044,6 +1044,26 @@ mi_decl_nodiscard void* mi_new_reallocn(void* p, size_t newcount, size_t size) {
   }
 }
 
+float mi_heap_page_utilization(mi_heap_t* heap, void* p) mi_attr_noexcept {
+  mi_page_t* page = _mi_ptr_page(p);   // get the page that this belongs to
+
+  mi_heap_t* page_heap = (mi_heap_t*)(mi_atomic_load_acquire(&(page)->xheap));
+
+  // the heap id matches and it is not a full page
+  if (mi_likely(page_heap == heap && page->flags.x.in_full == 0)) {
+    // first in the list, meaning it's the head of page queue, thus being used for malloc
+    if (page->prev == NULL)
+      return 1.0;
+
+    // this page belong to this heap and is not first in the page queue. Lets check its
+    // utilization.
+    float ratio = (float)page->used / (float)page->capacity;
+    mi_assert_internal(ratio <= 1.0);
+    return ratio;
+  }
+  return 1.0;
+}
+
 // ------------------------------------------------------
 // ensure explicit external inline definitions are emitted!
 // ------------------------------------------------------
