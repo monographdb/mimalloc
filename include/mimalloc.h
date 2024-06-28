@@ -171,6 +171,8 @@ typedef size_t mi_threadid_t;
 mi_decl_export mi_threadid_t mi_override_thread(mi_threadid_t override_id);
 mi_decl_nodiscard mi_decl_export mi_threadid_t mi_thread_id(void);
 mi_decl_export void mi_restore_default_thread_id(void);
+mi_decl_export bool mi_is_override_thread(void);
+
 
 // -------------------------------------------------------------------------------------
 // Aligned allocation

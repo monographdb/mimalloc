@@ -154,6 +154,8 @@ mi_threadid_t mi_override_thread(mi_threadid_t override_id) {
 
 void mi_restore_default_thread_id(void) { _mi_use_override_thread_id = false; }
 
+bool mi_is_override_thread() { return _mi_use_override_thread_id; }
+
 mi_threadid_t mi_thread_id(void) { return _mi_thread_id(); }
 // the thread-local default heap for allocation
 mi_decl_thread mi_heap_t* _mi_heap_default = (mi_heap_t*)&_mi_heap_empty;
